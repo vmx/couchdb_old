@@ -18,6 +18,9 @@
 -export([parse_view_query/1,parse_view_query/2,parse_view_query/4,make_view_fold_fun/6,
     finish_view_fold/3, view_row_obj/3, view_group_etag/1, view_group_etag/2, make_reduce_fold_funs/5]).
 
+% For _mix
+-export([parse_view_query_list/1,validate_map_query/1]).
+
 -import(couch_httpd,
     [send_json/2,send_json/3,send_json/4,send_method_not_allowed/2,send_chunk/2,
     start_json_response/2, start_json_response/3, end_json_response/1]).
@@ -255,6 +258,15 @@ parse_view_query(Req, Keys, IsReduce) ->
     parse_view_query(Req, Keys, IsReduce, false).
 parse_view_query(Req, Keys, IsReduce, IgnoreExtra) ->
     QueryList = couch_httpd:qs(Req),
+    parse_view_query_list(QueryList, Keys, IsReduce, IgnoreExtra).
+
+parse_view_query_list(QueryList) ->
+    parse_view_query_list(QueryList, nil, nil, false).
+parse_view_query_list(QueryList, Keys) ->
+    parse_view_query_list(QueryList, Keys, nil, false).
+parse_view_query_list(QueryList, Keys, IsReduce) ->
+    parse_view_query_list(QueryList, Keys, IsReduce, false).
+parse_view_query_list(QueryList, Keys, IsReduce, IgnoreExtra) ->
     #view_query_args{
         group_level = GroupLevel
     } = QueryArgs = lists:foldl(fun({Key,Value}, Args) ->
