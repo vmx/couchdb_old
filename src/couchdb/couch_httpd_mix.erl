@@ -160,9 +160,7 @@ make_view_fold_fun(Req, QueryArgs, Etag, Db,
     Fun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, Etag, Db, TotalViewCount, HelperFuns),
     fun({{Key, DocId}, Value}, OffsetReds,
                       {AccLimit, AccSkip, Resp, AccRevRows}) ->
-        Q = proplists:get_value(<<"q">>, ExternalQuery),
-        ExternalQuery2 = [{<<"q">>, Q},
-                          {<<"docid">>, DocId}],
+        ExternalQuery2 = ExternalQuery ++ [{<<"docid">>, DocId}],
         Response = process_external(Req, Db, ExternalName, ExternalQuery2),
         #extern_resp_args{
             data = Data
