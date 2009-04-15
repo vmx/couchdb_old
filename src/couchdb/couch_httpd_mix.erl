@@ -22,14 +22,7 @@
     query_ = nil
 }).
 
-process_external(HttpReq, Db, Name, QueryJson) ->
-    Query = lists:map(
-        fun(Param) ->
-	    {Key, Value} = Param,
-	    {Key, ?l2b(?JSON_ENCODE(Value))}
-	end,
-	QueryJson),
-
+process_external(HttpReq, Db, Name, Query) ->
     couch_external_manager:execute(binary_to_list(Name),
         json_req_obj(HttpReq, Db, Query)).
 
