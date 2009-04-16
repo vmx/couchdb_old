@@ -153,7 +153,14 @@ make_view_fold_fun(Req, QueryArgs, Etag, Db,
     Fun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, Etag, Db, TotalViewCount, HelperFuns),
     fun({{Key, DocId}, Value}, OffsetReds,
                       {AccLimit, AccSkip, Resp, AccRevRows}) ->
-        ExternalQuery2 = ExternalQuery ++ [{<<"docid">>, DocId}],
+        case proplists:get_bool(<<"include_docs">>, ExternalQuery) of
+        false ->
+            ExternalQuery2 = ExternalQuery ++ [{<<"docid">>, DocId}],
+            ?LOG_DEBUG("include_docs: false", []);
+        _ ->
+            ExternalQuery2 = ExternalQuery ++ [{<<"doc">>, Value}],
+            ?LOG_DEBUG("include_docs: true", [])
+        end,
         Response = process_external(Req, Db, ExternalName, ExternalQuery2),
         #extern_resp_args{
             data = Data
