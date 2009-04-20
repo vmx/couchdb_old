@@ -17,9 +17,15 @@
 
 -import(couch_httpd,[send_error/4,send_method_not_allowed/2]).
 
--record(mix_settings, {
+-record(mix_settings_view, {
     name = nil,
     query_ = nil
+}).
+
+-record(mix_settings_external, {
+    name = nil,
+    query_ = nil,
+    include_docs = false
 }).
 
 process_external(HttpReq, Db, Name, Query) ->
@@ -56,47 +62,56 @@ json_req_obj(#httpd{mochi_req=Req,
 
 % example request:
 % curl -d '{"design": "first", "view": {"name": "all", "query": {"limit": 11}}, "external": {"name": "geo", "query": {"q": {"geom": "loc", "inbbox": [0,-90,180,90]}}}}' http://localhost:5984/geodata/_mix
+%curl -d '{"design": "normal", "view": {"name": "all", "query": {"limit": "11", "include_docs": "true"}}, "external": {"name": "minimal", "query": {"q": "q3"}, "include_docs": true}}' http://localhost:5984/foo/_mix
 handle_mix_req(#httpd{method='POST'}=Req, Db) ->
     {Props} = couch_httpd:json_body(Req),
     DesignDoc = proplists:get_value(<<"design">>, Props),
     {ViewProps} = proplists:get_value(<<"view">>, Props, {}),
-    #mix_settings{
+    #mix_settings_view{
         name = ViewName,
         query_ = {ViewQuery}
-    } = parse_mix_settings(ViewProps),
+    } = parse_mix_settings_view(ViewProps),
     ViewArgs = lists:map(fun({Key, Value}) ->
             {binary_to_list(Key), binary_to_list(Value)}
          end,
          ViewQuery),
 
     {ExternalProps} = proplists:get_value(<<"external">>, Props, {}),
-    #mix_settings{
-        name = ExternalName,
-        query_ = {ExternalQuery}
-    } = parse_mix_settings(ExternalProps),
-
     % nil == Keys
-    design_doc_view(Req, Db, DesignDoc, ViewName, nil, ViewArgs, ExternalName,
-        ExternalQuery);
+    design_doc_view(Req, Db, DesignDoc, ViewName, nil, ViewArgs,
+        ExternalProps);
 
 handle_mix_req(Req, _Db) ->
     send_method_not_allowed(Req, "POST").
 
-parse_mix_settings(Settings) ->
+parse_mix_settings_view(Settings) ->
     lists:foldl(fun({Key,Value}, Args) ->
         case {Key, Value} of
         {"", _} ->
             Args;
         {<<"name">>, Value} ->
-            Args#mix_settings{name=Value};
+            Args#mix_settings_view{name=Value};
         {<<"query">>, Value} ->
-            Args#mix_settings{query_=Value}
+            Args#mix_settings_view{query_=Value}
 	end
-    end, #mix_settings{}, Settings).
+    end, #mix_settings_view{}, Settings).
+
+parse_mix_settings_external(Settings) ->
+    lists:foldl(fun({Key,Value}, Args) ->
+        case {Key, Value} of
+        {"", _} ->
+            Args;
+        {<<"name">>, Value} ->
+            Args#mix_settings_external{name=Value};
+        {<<"query">>, Value} ->
+            Args#mix_settings_external{query_=Value};
+        {<<"include_docs">>, Value} ->
+            Args#mix_settings_external{include_docs=Value}
+	end
+    end, #mix_settings_external{}, Settings).
 
 
-design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalName,
-        ExternalQuery) ->
+design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalProps) ->
     #view_query_args{
         stale = Stale,
         reduce = Reduce
@@ -104,8 +119,7 @@ design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalName,
     DesignId = <<"_design/", Id/binary>>,
     Result = case couch_view:get_map_view(Db, DesignId, ViewName, Stale) of
     {ok, View, Group} ->
-        output_map_view(Req, View, Group, Db, QueryArgs, Keys, ExternalName,
-                ExternalQuery);
+        output_map_view(Req, View, Group, Db, QueryArgs, Keys, ExternalProps);
     {not_found, Reason} ->
         case couch_view:get_reduce_view(Db, DesignId, ViewName, Stale) of
         {ok, ReduceView, Group} ->
@@ -114,7 +128,7 @@ design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalName,
             false ->
                 MapView = couch_view:extract_map_view(ReduceView),
                 output_map_view(Req, MapView, Group, Db, QueryArgs, Keys,
-                        ExternalName, ExternalQuery);
+                        ExternalProps);
             _ ->
                 couch_httpd_view:output_reduce_view(Req, ReduceView, Group, QueryArgs, Keys)
             end;
@@ -125,8 +139,7 @@ design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalName,
     couch_stats_collector:increment({httpd, view_reads}),
     Result.
 
-output_map_view(Req, View, Group, Db, QueryArgs, nil, ExternalName,
-        ExternalQuery) ->
+output_map_view(Req, View, Group, Db, QueryArgs, nil, ExternalProps) ->
     #view_query_args{
         limit = Limit,
         direction = Dir,
@@ -141,19 +154,23 @@ output_map_view(Req, View, Group, Db, QueryArgs, nil, ExternalName,
         Start = {StartKey, StartDocId},
         FoldlFun = make_view_fold_fun(Req, QueryArgs, CurrentEtag, Db,
                 RowCount, #view_fold_helper_funs{
-                reduce_count=fun couch_view:reduce_to_count/1}, ExternalName,
-                ExternalQuery),
+                reduce_count=fun couch_view:reduce_to_count/1}, ExternalProps),
         FoldAccInit = {Limit, SkipCount, undefined, []},
         FoldResult = couch_view:fold(View, Start, Dir, FoldlFun, FoldAccInit),
         couch_httpd_view:finish_view_fold(Req, RowCount, FoldResult)
     end).
 
 make_view_fold_fun(Req, QueryArgs, Etag, Db,
-        TotalViewCount, HelperFuns, ExternalName, ExternalQuery) ->
+        TotalViewCount, HelperFuns, ExternalProps) ->
     Fun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, Etag, Db, TotalViewCount, HelperFuns),
+    #mix_settings_external{
+        name = ExternalName,
+        query_ = {ExternalQuery},
+        include_docs = IncludeDocs
+    } = parse_mix_settings_external(ExternalProps),
     fun({{Key, DocId}, Value}, OffsetReds,
                       {AccLimit, AccSkip, Resp, AccRevRows}) ->
-        case proplists:get_bool(<<"include_docs">>, ExternalQuery) of
+        case IncludeDocs of
         false ->
             ExternalQuery2 = ExternalQuery ++ [{<<"docid">>, DocId}],
             ?LOG_DEBUG("include_docs: false", []);
