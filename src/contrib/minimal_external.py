@@ -13,20 +13,28 @@
 import os
 import sys
 import random
+import logging
 try:
     import json # python >= 2.6
 except ImportError:
     import simplejson as json
 
+LOG_FILE = 'minimal.log'
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename=LOG_FILE,
+    format='%(levelname) 10s %(asctime)s %(message)s')
+
 class Minimal(object):
     """Process an _external request
 
     An example for an request would be:
-    curl -d '{"design": "designdoc", "view": {"name": "viewname", "query": {"limit": 11}}, "external": {"name": "_externalname", "query": {"q": ""}}}' http://localhost:5984/dbname/_mix
+    curl -d '{"design": "designdoc", "view": {"name": "viewname", "query": {"limit": 11}}, "external": {"name": "_externalname", "query": {"q": "something"}, "include_docs": true}}' http://localhost:5984/dbname/_mix
 
     """
     def __init__(self):
         random.seed(29)
+        self.log = logging.getLogger('minimal')
 
     def wait_for_query(self):
         """Main loop that is waiting for CouchDB external queries"""
@@ -34,12 +42,14 @@ class Minimal(object):
             rawinput = sys.stdin.readline()
             
             if rawinput != '':
+                self.log.debug("rawinput: %s" % rawinput)
                 self.process_query(json.loads(rawinput))
                 sys.stdout.flush()
             else:
                 break
 
     def process_query(self, request):
+        self.log.debug("request: %s" % request)
         rand = random.random()
         if rand < 0.5:
             sys.stdout.write('{"code": 200, "json": true}\n')
