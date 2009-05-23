@@ -169,16 +169,21 @@ make_view_fold_fun(Req, QueryArgs, Etag, Db,
         include_docs = IncludeDocs
     } = parse_mix_settings_external(ExternalProps),
 
-    %Response = process_external(Req, Db, ExternalName, ExternalQuery),
-    %#extern_resp_args{
-    %    data = Data
-    %} = couch_httpd_external:parse_external_response(Response),
-    %?LOG_DEBUG("Response: ~p", [Data]),
+    Response = process_external(Req, Db, ExternalName, ExternalQuery),
+    #extern_resp_args{
+        data = Data
+    } = couch_httpd_external:parse_external_response(Response),
+    ExternalDocIds = ?JSON_DECODE(Data),
+    %?LOG_DEBUG("ExternalDocIds: ~p", [ExternalDocIds]),
+    ?LOG_DEBUG("ExternalDocIds size: ~p", [length(ExternalDocIds)]),
+    ExternalDocIdsSet = sets:from_list(ExternalDocIds),
 
     fun({{Key, DocId}, Value}, OffsetReds,
                       {AccLimit, AccSkip, Resp, AccRevRows}) ->
         %IncludeDoc = ?JSON_DECODE(Data),
-        IncludeDoc = true,
+        %IncludeDoc = true,
+        %IncludeDoc = lists:member(DocId, ExternalDocIds),
+        IncludeDoc = sets:is_element(DocId, ExternalDocIdsSet),
         case IncludeDoc of
         false ->
             Fun({{Key, DocId}, Value}, OffsetReds,

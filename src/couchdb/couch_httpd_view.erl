@@ -618,7 +618,7 @@ view_row_obj(Db, {{Key, DocId}, Value}, IncludeDocs) ->
             _ ->
                 nil
             end,
-            ?LOG_DEBUG("Include Doc: ~p ~p", [DocId, Rev]),
+%            ?LOG_DEBUG("Include Doc: ~p ~p", [DocId, Rev]),
             case (catch couch_httpd_db:couch_doc_open(Db, DocId, Rev, [])) of
               {{not_found, missing}, _RevId} ->
                   {[{id, DocId}, {key, Key}, {value, Value}, {error, missing}]};

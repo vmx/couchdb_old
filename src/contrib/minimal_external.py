@@ -51,10 +51,10 @@ class Minimal(object):
     def process_query(self, request):
         self.log.debug("request: %s" % request)
         rand = random.random()
-        if rand < 0.5:
-            sys.stdout.write('{"code": 200, "json": true}\n')
-        else:
-            sys.stdout.write('{"code": 200, "json": false}\n')
+        #if rand < 0.5:
+        sys.stdout.write('{"code": 200, "json": true}\n')
+        #else:
+        #    sys.stdout.write('{"code": 200, "json": false}\n')
 
 def main(args=None):
     m = Minimal()
