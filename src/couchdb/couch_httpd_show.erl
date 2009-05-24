@@ -12,7 +12,11 @@
 
 -module(couch_httpd_show).
     
--export([handle_doc_show_req/2, handle_view_list_req/2]).
+-export([handle_doc_show_req/2, handle_view_list_req/2,
+         % for _mix
+         get_nested_json_value/2, output_reduce_list/8,
+         make_map_start_resp_fun/4, make_map_send_row_fun/2,
+         finish_list/7]).
 
 
 -include("couch_db.hrl").
