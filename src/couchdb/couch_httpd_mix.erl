@@ -17,28 +17,9 @@
 
 -import(couch_httpd,[send_error/4,send_method_not_allowed/2]).
 
-
--record(mix_get_req, {
-    external = nil,
-    view = nil,
-    list = nil
-}).
-
--record(mix_settings_view, {
-    name = nil,
-    query_ = nil
-}).
-
 -record(mix_settings_external, {
     name = nil,
-    query_ = nil,
-    include_docs = false
-}).
-
--record(mix_settings_list, {
-    name = nil,
-    query_ = nil,
-    view = nil
+    query_ = nil
 }).
 
 process_external(HttpReq, Db, Name, Query) ->
@@ -67,146 +48,52 @@ json_req_obj(#httpd{mochi_req=Req,
     {[{<<"info">>, {Info}},
         {<<"verb">>, Verb},
         {<<"path">>, Path},
-        {<<"query">>, {Query}}]}.
+        %{<<"query">>, {Query}}]}.
+        {<<"query">>, {kvlist_l2b(Query)}}]}.
 %        {<<"headers">>, couch_httpd_external:to_json_terms(Hlist)},
 %        {<<"body">>, Body},
 %        {<<"form">>, couch_httpd_external:to_json_terms(ParsedForm)},
 %        {<<"cookie">>, couch_httpd_external:to_json_terms(Req:parse_cookie())}}]}.
 
 % example request
-% curl 'http://localhost:5984/geodata/_mix/normal?view=\{"name":"all","query":\{"limit":"10000"\}\}&external=\{"name":"geo","query":\{"q":"\{\"geom\":\"location\",\"bbox\":\[0,50,11,51\]\}"\}\}'
-% http://localhost:5984/geodata/_mix/normal?view={"name":"all","query":{"limit":"11"}}&external={"name":"geo","query":{"q":"{\"geom\":\"location\",\"bbox\":[0,50,11,51]}"}}
-% curl 'http://localhost:5984/geodata/_mix/normal?list=\{"name":"geojson","view":"all","query":\{"limit":"100"\}\}&external=\{"name":"geo","query":\{"q":"\{\"geom\":\"location\",\"bbox\":\[0,50,11,51\]\}"\}\}'
+% http://localhost:5984/geodata/_mix/normal/_external/geo/_list/geojson/all?limit=11&geom=location&bbox=0,50,11,51
+% _external/_list intersection
 handle_mix_req(#httpd{method='GET',
-        path_parts=[_Db, _Mix, DesignName]}=Req, Db) ->
+        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
+                    _List, ListName, ViewName]}=Req, Db) ->
     QueryList = couch_httpd:qs(Req),
-    ?LOG_DEBUG("QueryList: ~p", [QueryList]),
+    ExternalProps = #mix_settings_external{name=ExternalName,
+                                           query_=QueryList},
 
-    #mix_get_req{
-        external = ExternalProps,
-        view = ViewProps,
-        list = ListProps
-    } = parse_mix_get_req(QueryList),
-    ?LOG_DEBUG("external, view, list: ~p ~p ~p", [ExternalProps, ViewProps,
-                                                  ListProps]),
+    DesignId = <<"_design/", DesignName/binary>>,
+    #doc{body={Props}} = couch_httpd_db:couch_doc_open(Db, DesignId, nil, []),
+    Lang = proplists:get_value(<<"language">>, Props, <<"javascript">>),
+    ListSrc = couch_httpd_show:get_nested_json_value({Props}, [<<"lists">>,
+                                                               ListName]),
+    send_view_list_response(Lang, ListSrc, ViewName, DesignId, Req, Db, nil,
+                            QueryList, ExternalProps);
 
-    if
-        ViewProps /= nil ->
-            #mix_settings_view{
-                name = ViewName,
-                query_ = {ViewQuery}
-            } = parse_mix_settings_view(ViewProps),
-            ViewArgs = kvlist_b2l(ViewQuery),
-            design_doc_view(Req, Db, DesignName, ViewName, nil, ViewArgs,
-                            ExternalProps);
-        ListProps /= nil ->
-            #mix_settings_list{
-                name = ListName,
-                query_ = {ListQuery},
-                view = ListViewName
-            } = parse_mix_settings_list(ListProps),
-            ListArgs = kvlist_b2l(ListQuery),
-            ?LOG_DEBUG("ListQuery: ~p", [ListQuery]),
+% _external/_view intersection
+handle_mix_req(#httpd{method='GET',
+        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
+                    _View, ViewName]}=Req, Db) ->
+    QueryList = couch_httpd:qs(Req),
+    ExternalProps = #mix_settings_external{name=ExternalName,
+                                           query_=QueryList},
 
-            DesignId = <<"_design/", DesignName/binary>>,
-            #doc{body={Props}} = couch_httpd_db:couch_doc_open(Db, DesignId,
-                                                               nil, []),
-            Lang = proplists:get_value(<<"language">>, Props, <<"javascript">>),
-            ListSrc = couch_httpd_show:get_nested_json_value({Props},
-                                                     [<<"lists">>, ListName]),
-            send_view_list_response(Lang, ListSrc, ListViewName, DesignId, Req,
-                                    Db, nil, ListArgs, ExternalProps);
-        true ->
-            ?LOG_ERROR("view or list parameter is missing.", [])
-    end;
-
-% example request:
-% curl -d '{"design": "first", "view": {"name": "all", "query": {"limit": 11}}, "external": {"name": "geo", "query": {"q": {"geom": "loc", "inbbox": [0,-90,180,90]}}}}' http://localhost:5984/geodata/_mix
-%curl -d '{"design": "normal", "view": {"name": "all", "query": {"limit": "11", "include_docs": "true"}}, "external": {"name": "minimal", "query": {"q": "q3"}, "include_docs": true}}' http://localhost:5984/foo/_mix
-%curl -d '{"design": "normal", "view": {"name": "all", "query": {"limit": "20000"}}, "external": {"name": "geo", "query": {"q": "{\"geom\":\"location\",\"bbox\":[5,45,12,50]}"}, "include_docs": false}}' http://localhost:5984/geodata/_mix
-handle_mix_req(#httpd{method='POST'}=Req, Db) ->
-    {Props} = couch_httpd:json_body(Req),
-    DesignDoc = proplists:get_value(<<"design">>, Props),
-    {ViewProps} = proplists:get_value(<<"view">>, Props, {}),
-    #mix_settings_view{
-        name = ViewName,
-        query_ = {ViewQuery}
-    } = parse_mix_settings_view(ViewProps),
-    ViewArgs = lists:map(fun({Key, Value}) ->
-            {binary_to_list(Key), binary_to_list(Value)}
-         end,
-         ViewQuery),
-
-    {ExternalProps} = proplists:get_value(<<"external">>, Props, {}),
-    ?LOG_DEBUG("ExternalProps: ~p", [ExternalProps]),
-    % nil == Keys
-    design_doc_view(Req, Db, DesignDoc, ViewName, nil, ViewArgs,
-        ExternalProps);
+    design_doc_view(Req, Db, DesignName, ViewName, nil, QueryList,
+                    ExternalProps);
 
 handle_mix_req(Req, _Db) ->
-    send_method_not_allowed(Req, "GET,POST").
-
-parse_mix_get_req(GetReq) ->
-    lists:foldl(fun({Key, Value}, Args) ->
-        {ValueDecoded} = ?JSON_DECODE(Value),
-        case {Key, Value} of
-        {"", _} ->
-            Args;
-        {"external", Value} ->
-            Args#mix_get_req{external=ValueDecoded};
-        {"view", Value} ->
-            Args#mix_get_req{view=ValueDecoded};
-        {"list", Value} ->
-            Args#mix_get_req{list=ValueDecoded}
-        end
-     end, #mix_get_req{}, GetReq).
-
-parse_mix_settings_view(Settings) ->
-    lists:foldl(fun({Key,Value}, Args) ->
-        case {Key, Value} of
-        {"", _} ->
-            Args;
-        {<<"name">>, Value} ->
-            Args#mix_settings_view{name=Value};
-        {<<"query">>, Value} ->
-            Args#mix_settings_view{query_=Value}
-	end
-    end, #mix_settings_view{}, Settings).
-
-parse_mix_settings_external(Settings) ->
-    lists:foldl(fun({Key,Value}, Args) ->
-        case {Key, Value} of
-        {"", _} ->
-            Args;
-        {<<"name">>, Value} ->
-            Args#mix_settings_external{name=Value};
-        {<<"query">>, Value} ->
-            Args#mix_settings_external{query_=Value};
-        {<<"include_docs">>, Value} ->
-            Args#mix_settings_external{include_docs=Value}
-	end
-    end, #mix_settings_external{}, Settings).
-
-parse_mix_settings_list(Settings) ->
-    lists:foldl(fun({Key,Value}, Args) ->
-        case {Key, Value} of
-        {"", _} ->
-            Args;
-        {<<"name">>, Value} ->
-            Args#mix_settings_list{name=Value};
-        {<<"query">>, Value} ->
-            Args#mix_settings_list{query_=Value};
-        {<<"view">>, Value} ->
-            Args#mix_settings_list{view=Value}
-	end
-    end, #mix_settings_list{}, Settings).
+    send_method_not_allowed(Req, "GET").
 
 
-design_doc_view(Req, Db, Id, ViewName, Keys, ViewArgs, ExternalProps) ->
+design_doc_view(Req, Db, Id, ViewName, Keys, QueryList, ExternalProps) ->
     #view_query_args{
         stale = Stale,
         reduce = Reduce
-    } = QueryArgs = couch_httpd_view:parse_view_query_list(ViewArgs),
+    %} = QueryArgs = couch_httpd_view:parse_view_query_list(QueryList),
+    } = QueryArgs = couch_httpd_view:parse_view_query(Req, nil, nil, true),
     DesignId = <<"_design/", Id/binary>>,
     Result = case couch_view:get_map_view(Db, DesignId, ViewName, Stale) of
     {ok, View, Group} ->
@@ -256,24 +143,19 @@ make_view_fold_fun(Req, QueryArgs, Etag, Db,
     Fun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, Etag, Db, TotalViewCount, HelperFuns),
     #mix_settings_external{
         name = ExternalName,
-        query_ = {ExternalQuery},
-        include_docs = IncludeDocs
-    } = parse_mix_settings_external(ExternalProps),
+        query_ = ExternalQuery
+    } = ExternalProps,
 
     Response = process_external(Req, Db, ExternalName, ExternalQuery),
     #extern_resp_args{
         data = Data
     } = couch_httpd_external:parse_external_response(Response),
     ExternalDocIds = ?JSON_DECODE(Data),
-    %?LOG_DEBUG("ExternalDocIds: ~p", [ExternalDocIds]),
     ?LOG_DEBUG("ExternalDocIds size: ~p", [length(ExternalDocIds)]),
     ExternalDocIdsSet = sets:from_list(ExternalDocIds),
 
     fun({{Key, DocId}, Value}, OffsetReds,
                       {AccLimit, AccSkip, Resp, AccRevRows}) ->
-        %IncludeDoc = ?JSON_DECODE(Data),
-        %IncludeDoc = true,
-        %IncludeDoc = lists:member(DocId, ExternalDocIds),
         IncludeDoc = sets:is_element(DocId, ExternalDocIdsSet),
         case IncludeDoc of
         false ->
@@ -289,12 +171,11 @@ end.
 
 
 send_view_list_response(Lang, ListSrc, ViewName, DesignId, Req, Db, Keys,
-                        ViewArgs, ExternalProps) ->
+                        QueryList, ExternalProps) ->
     #view_query_args{
         stale = Stale,
         reduce = Reduce
-    %} = QueryArgs = couch_httpd_view:parse_view_query(Req, nil, nil, true),
-    } = QueryArgs = couch_httpd_view:parse_view_query_list(ViewArgs),
+    } = QueryArgs = couch_httpd_view:parse_view_query(Req, nil, nil, true),
     case couch_view:get_map_view(Db, DesignId, ViewName, Stale) of
     {ok, View, Group} ->    
         output_map_list(Req, Lang, ListSrc, View, Group, Db, QueryArgs, Keys, ExternalProps);
@@ -348,8 +229,8 @@ output_map_list(#httpd{mochi_req=MReq}=Req, Lang, ListSrc, View, Group, Db, Quer
     end).
 
 
-kvlist_b2l(KVList) ->
+kvlist_l2b(KVList) ->
     lists:map(fun({Key, Value}) ->
-        {binary_to_list(Key), binary_to_list(Value)}
+        {list_to_binary(Key), list_to_binary(Value)}
     end,
     KVList).
