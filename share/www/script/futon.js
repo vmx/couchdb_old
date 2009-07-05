@@ -114,7 +114,24 @@
   $(function() {
     document.title = "Apache CouchDB - Futon: " + document.title;
     $.get("_sidebar.html", function(resp) {
-      $(resp).insertAfter("#wrap");
+      $("#wrap").append(resp)
+        .find("#sidebar-hide")
+        .click(function() {
+          var showSidebar = $('<span id="sidebar-show">Show Sidebar</span>')
+            .click(function() {
+              $("#sidebar").fadeIn();
+              $("body").css("padding-right", "210px");
+              $("#wrap h1 .raw").css("margin-right", "0");
+              $(this).remove();
+            });
+
+          $("body").css("padding-right", "0");
+          $("#sidebar").fadeOut();
+
+          $("#wrap h1")
+            .append(showSidebar)
+            .find(".raw").css("margin-right", "210px");
+        });
 
       $.futon.navigation.updateDatabases();
       $.futon.navigation.updateSelection();

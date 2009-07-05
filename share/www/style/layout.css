@@ -18,7 +18,7 @@ specific language governing permissions and limitations under the License.
 html, body { color: #000; font: normal 90% Arial,Helvetica,sans-serif;
   height: 100%; margin: 0; padding: 0; overflow: hidden;
 }
-body { background: #fff url(../image/bg.png) 100% 0 repeat-y;
+body {
   padding-right: 210px;
 }
 :link, :visited { color: #ba1e16; text-decoration: none; }
@@ -157,7 +157,7 @@ ul.suggest-dropdown li.selected { cursor: pointer; background: Highlight;
 #sidebar { background: #fff; position: absolute; top: 0; right: 0;
   width: 210px; height: 100%;
 }
-#logo { padding: 20px 18px; }
+#logo { padding: 0 18px 20px 18px; }
 
 #nav { color: #333; font-size: 110%; font-weight: bold; list-style: none;
   margin: 0; overflow: auto; padding: 0; position: absolute; top: 185px;
@@ -539,4 +539,27 @@ form#replicator p.actions { padding: 1px; clear: left; margin: 0;
 #status tr.none th { color: #666; font-weight: normal; }
 #status td.object, #status td.pid {
   font-family: "DejaVu Sans Mono",Monaco,monospace; font-size: 11px;
+}
+
+
+#sidebar #sidebar-hide {
+  color: #999;
+  cursor: pointer;
+  display: block;
+  float:right;
+  font-size: 110%;
+  padding: .3em 1em;
+}
+
+#sidebar-show {
+  cursor: pointer;
+  font-size: 80%;
+  height:100%;
+  padding:0;
+  position:absolute;
+  right:10px;
+}
+
+#wrap {
+  background: #fff url(../image/bg2.png) 100% 0 repeat-y;
 }
