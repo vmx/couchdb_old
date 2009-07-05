@@ -100,6 +100,24 @@
       });
     }
 
+    this.hideSidebar = function(hideImmediately) {
+      $("body").css("padding-right", "0");
+      $("#sidebar").fadeOut();
+
+      var showSidebar = $('<span id="sidebar-show">Show Sidebar</span>')
+        .click(function() {
+          $("#sidebar").fadeIn();
+          $("body").css("padding-right", "210px");
+          $("#wrap h1 .raw").css("margin-right", "0");
+          $(this).remove();
+          $.cookies.set("sidebar", "visible");
+        });
+
+      $("#wrap h1")
+        .append(showSidebar)
+        .find(".raw").css("margin-right", "210px");
+      $.cookies.set("sidebar", "hidden");
+    };
   }
 
   $.futon = $.futon || {};
@@ -112,26 +130,23 @@
     .ajaxStop(function() { $(this.body).removeClass("loading"); });
 
   $(function() {
+    var sidebar = $.cookies.get("sidebar");
+    // doing it as early as possible prevents flickering
+    if (sidebar=="hidden")
+      $("body").css("padding-right", "0");
+
     document.title = "Apache CouchDB - Futon: " + document.title;
     $.get("_sidebar.html", function(resp) {
       $("#wrap").append(resp)
         .find("#sidebar-hide")
         .click(function() {
-          var showSidebar = $('<span id="sidebar-show">Show Sidebar</span>')
-            .click(function() {
-              $("#sidebar").fadeIn();
-              $("body").css("padding-right", "210px");
-              $("#wrap h1 .raw").css("margin-right", "0");
-              $(this).remove();
-            });
-
-          $("body").css("padding-right", "0");
-          $("#sidebar").fadeOut();
-
-          $("#wrap h1")
-            .append(showSidebar)
-            .find(".raw").css("margin-right", "210px");
+          $.futon.navigation.hideSidebar();
         });
+
+      if (sidebar=="hidden") {
+        $("#sidebar").hide();
+        $.futon.navigation.hideSidebar();
+      }
 
       $.futon.navigation.updateDatabases();
       $.futon.navigation.updateSelection();
