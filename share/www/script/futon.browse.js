@@ -258,9 +258,9 @@
                     .attr("label", doc._id.substr(8));
                   for (var name in doc.views) {
                     var option = $(document.createElement("option"))
-                      .attr("value", doc._id + "/" + name).text(name)
+                      .attr("value", doc._id + "/_view/" + name).text(name)
                       .appendTo(optGroup);
-                    if (doc._id + "/" + name == viewName) {
+                    if (doc._id + "/_view/" + name == viewName) {
                       option[0].selected = true;
                     }
                   }
@@ -283,7 +283,7 @@
         if (!page.storedViewCode) {
           var viewNameParts = viewName.split("/");
           var designDocId = viewNameParts[1];
-          var localViewName = viewNameParts[2];
+          var localViewName = viewNameParts[3];
           db.openDoc(["_design", designDocId].join("/"), {
             error: function(status, error, reason) {
               if (status == 404) {
@@ -332,7 +332,7 @@
         if (viewName && /^_design/.test(viewName)) {
           var viewNameParts = viewName.split("/");
           var designDocId = viewNameParts[1];
-          var localViewName = viewNameParts[2];
+          var localViewName = viewNameParts[3];
         } else {
           var designDocId = "", localViewName = "";
         }
@@ -428,7 +428,7 @@
       this.saveViewChanges = function() {
         var viewNameParts = viewName.split("/");
         var designDocId = viewNameParts[1];
-        var localViewName = viewNameParts[2];
+        var localViewName = viewNameParts[3];
         db.openDoc(["_design", designDocId].join("/"), {
           success: function(doc) {
             var numViews = 0;
@@ -635,7 +635,8 @@
             if (page.isDirty) {
               db.query(currentMapCode, currentReduceCode, page.viewLanguage, options);
             } else {
-              db.view(viewName.substr(8), options);
+              var viewParts = viewName.split('/');
+              db.view(viewParts[1]+'/'+viewParts[3], options);
             }
           }
         }
