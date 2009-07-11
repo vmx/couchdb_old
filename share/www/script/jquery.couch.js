@@ -370,8 +370,8 @@
           }
         }
       });
-    }
-
+    },
+    encodeOptions: encodeOptions
   });
 
   // Convert a options object to an url query string.

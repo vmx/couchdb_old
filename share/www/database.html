@@ -45,54 +45,31 @@ specific language governing permissions and limitations under the License.
             "/" + viewPath);
         }
 
-        $("#viewcode span").click(function() {
-          $("#viewcode").toggleClass("collapsed");
+        $("#funcode span").click(function() {
+          $("#funcode").toggleClass("collapsed");
         });
-        $("#viewcode button.run").click(function() {
-          page.updateDocumentListing();
+        $("#funcode button.run").click(function() {
+          page.updateDocumentListing
         });
-        $("#viewcode button.revert").click(function() {
+        $("#funcode button.revert").click(function() {
           page.revertViewChanges();
         });
-        $("#viewcode button.save").click(function() {
+        $("#funcode button.save").click(function() {
           page.saveViewChanges();
         });
-        $("#viewcode button.saveas").click(function() {
+        $("#funcode button.saveas").click(function() {
           page.saveViewAs();
         });
-        $("#viewcode textarea").makeResizable({
+        $("#funcode textarea").makeResizable({
           always: true,
-          grippie: $("#viewcode .bottom"),
+          grippie: $("#funcode .bottom"),
           vertical: true
         });
-        $("#viewcode td.map").makeResizable({
+        $("#funcode td.map").makeResizable({
           always: true,
-          grippie: $("#viewcode td.splitter"),
+          grippie: $("#funcode td.splitter"),
           horizontal: true
         });
-
-
-        $("#listcode span").click(function() {
-          $("#listcode").toggleClass("collapsed");
-        });
-        $("#listcode button.run").click(function() {
-          page.updateDocumentListing();
-        });
-        $("#listcode button.revert").click(function() {
-          page.revertViewChanges();
-        });
-        $("#listcode button.save").click(function() {
-          page.saveViewChanges();
-        });
-        $("#listcode button.saveas").click(function() {
-          page.saveViewAs();
-        });
-        $("#listcode textarea").makeResizable({
-          always: true,
-          grippie: $("#listcode .bottom"),
-          vertical: true
-        });
-
 
         // Restore preferences/state from cookies
         var desc = $.cookies.get(page.db.name + ".desc");
@@ -107,7 +84,6 @@ specific language governing permissions and limitations under the License.
           page.updateDocumentListing();
         } else {
           $("#viewcode").show().removeClass("collapsed").find("textarea")[0].focus();
-          $("#listcode").show().removeClass("collapsed").find("textarea")[0].focus();
           $("#documents").hide();
         }
 
@@ -176,12 +152,12 @@ specific language governing permissions and limitations under the License.
         <li><button class="delete">Delete Database</button></li>
       </ul>
 
-      <div id="viewcode" class="collapsed" style="display: none">
+      <div id="funcode" class="collapsed" style="display: none">
         <div class="top">
           <a class="designdoc-link"></a>
           <span id="view-toggle">View Code</span>
         </div>
-        <table summary="View functions" cellspacing="0"><tr>
+        <table id="viewcode" summary="View functions" cellspacing="0" style="display: none"><tr>
           <td class="code map">
             <label for="viewcode_map">Map Function:</label>
             <textarea id="viewcode_map" class="map" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
@@ -192,6 +168,10 @@ specific language governing permissions and limitations under the License.
             <textarea id="viewcode_reduce" class="reduce" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
           </td>
         </tr></table>
+        <div id="listcode" class="code" style="display: none">
+          <label for="listcode_fun">List Function:</label>
+          <textarea id="listcode_fun" class="list" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
+        </div>
         <div class="bottom">
           <button class="save" type="button" disabled>Save</button>
           <button class="saveas" type="button">Save As…</button>
@@ -207,7 +187,7 @@ specific language governing permissions and limitations under the License.
         view to experiment with view functions, but switch to a permanent view
         before using them in an application.
       </p>
-
+<!--
       <div id="listcode" class="collapsed" style="display: none">
         <div class="top">
           <a class="designdoc-link"></a>
@@ -225,7 +205,7 @@ specific language governing permissions and limitations under the License.
           <label>Language: <select id="language"></select></label>
         </div>
       </div>
-
+-->
 
       <table id="documents" class="listing" cellspacing="0">
         <caption>Documents</caption>

@@ -171,13 +171,13 @@
       }
 
       this.populateViewEditor = function() {
-        if (viewName.match(/^_design\//)) {
+        if (viewName.match(/^_design\/.*\/_view\//)) {
           page.revertViewChanges(function() {
             var dirtyTimeout = null;
             function updateDirtyState() {
               clearTimeout(dirtyTimeout);
               dirtyTimeout = setTimeout(function() {
-                var buttons = $("#viewcode button.save, #viewcode button.revert");
+                var buttons = $("#funcode button.save, #funcode button.revert");
                 page.isDirty = ($("#viewcode_map").val() != page.storedViewCode.map)
                   || ($("#viewcode_reduce").val() != (page.storedViewCode.reduce || ""))
                   || page.viewLanguage != page.storedViewLanguage;
@@ -300,7 +300,7 @@
               page.viewLanguage = resp.language || "javascript";
               $("#language").val(page.viewLanguage);
               page.updateViewEditor(viewCode.map, viewCode.reduce || "");
-              $("#viewcode button.revert, #viewcode button.save").attr("disabled", "disabled");
+              $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
               page.storedViewCode = viewCode;
               page.storedViewLanguage = page.viewLanguage;
               if (callback) callback();
@@ -311,7 +311,7 @@
             page.storedViewCode.reduce || "");
           page.viewLanguage = page.storedViewLanguage;
           $("#language").val(page.viewLanguage);
-          $("#viewcode button.revert, #viewcode button.save").attr("disabled", "disabled");
+          $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
           page.isDirty = false;
           if (callback) callback();
         }
@@ -448,7 +448,7 @@
             db.saveDoc(doc, {
               success: function(resp) {
                 page.isDirty = false;
-                $("#viewcode button.revert, #viewcode button.save")
+                $("#funcode button.revert, #funcode button.save")
                   .attr("disabled", "disabled");
               }
             });
@@ -456,13 +456,87 @@
         });
       }
 
+      this.populateListEditor = function() {
+        if (viewName.match(/^_design\/.+\/_list\//)) {
+          page.revertListChanges(function(){
+            var dirtyTimeout = null;
+            function updateDirtyState() {
+              clearTimeout(dirtyTimeout);
+              dirtyTimeout = setTimeout(function() {
+                var buttons = $("#funcode button.save, #funcode button.revert");
+                page.isDirty = $("#listcode_fun").val() != page.storedListCode
+                  ||  page.viewLanguage != page.storedViewLanguage;
+                if (page.isDirty) {
+                  buttons.removeAttr("disabled");
+                } else {
+                  buttons.attr("disabled", "disabled");
+                }
+              }, 100);
+            }
+            $("#listcode textarea").bind("input", updateDirtyState);
+            if ($.browser.msie || $.browser.safari) {
+              $("#listcode textarea").bind("paste", updateDirtyState)
+                                     .bind("change", updateDirtyState)
+                                     .bind("keydown", updateDirtyState)
+                                     .bind("keypress", updateDirtyState)
+                                     .bind("keyup", updateDirtyState)
+                                     .bind("textInput", updateDirtyState);
+            }
+            $("#language").change(updateDirtyState);
+          });
+        }
+        page.populateLanguagesMenu();
+      };
+
+      this.revertListChanges = function(callback) {
+        if (!page.storedListCode) {
+          // TODO rename viewName variable, as it could be _list as well
+          var listNameParts = viewName.split("/");
+          var designDocId = listNameParts[1];
+          //var localListName = listNameParts.slice(3,5).join("/");
+          var localListName = listNameParts[3];
+          var localViewName = listNameParts[4];
+          db.openDoc(["_design", designDocId].join("/"), {
+            error: function(status, error, reason) {
+              if (status == 404) {
+                $.cookies.remove(dbName + ".list");
+                location.href = "database.html?" + encodeURIComponent(db.name);
+              }
+            },
+            success: function(resp) {
+              if(!resp.lists || !resp.lists[localListName]) {
+                $.cookies.remove(dbName + ".list");
+                location.href = "database.html?" + encodeURIComponent(db.name);
+              }
+              var listCode = resp.lists[localListName];
+              $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
+              page.storedListCode = listCode;
+              page.updateListEditor(listCode);
+              if (callback) callback();
+            }
+          },{async:false});
+        } else {
+          page.updateListEditor(page.storedListCode);
+          $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
+          page.isDirty = false;
+          if (callback) callback();
+        }
+      };
+
+      this.updateListEditor = function(listFun) {
+        if (!listFun) return;
+        $("#listcode_fun").val(listFun);
+        var lines = listFun.split("\n").length;
+        $("#listcode textarea").attr("rows", Math.min(15, Math.max(3, lines)));
+      };
+
       this.updateDesignDocLink = function() {
         if (viewName && /^_design/.test(viewName)) {
           var docId = "_design/" + viewName.split("/")[1];
-          $("#designdoc-link").attr("href", "document.html?" +
+          $(".designdoc-link").attr("href", "document.html?" +
             encodeURIComponent(dbName) + "/" + encodeDocId(docId)).text(docId);
         } else {
-          $("#designdoc-link").removeAttr("href").text("");
+          $(".designdoc-link").removeAttr("href").text("");
         }
       }
 
@@ -609,7 +683,8 @@
           db.allDocs(options);
         } else {
           if (viewName == "_temp_view") {
-            $("#viewcode").show().removeClass("collapsed");
+            $("#viewcode").css("display", null);
+            $("#funcode").show().removeClass("collapsed");
             var mapFun = $("#viewcode_map").val();
             $.cookies.set(db.name + ".map", mapFun);
             var reduceFun = $("#viewcode_reduce").val() || null;
@@ -625,8 +700,9 @@
             options.startkey = options.descending ? "_design0" : "_design";
             options.endkey = options.descending ? "_design" : "_design0";
             db.allDocs(options);
-          } else {
-            $("#viewcode").show();
+          } else if (viewName.match(/^_design\/.+\/_view\//)){
+            $("#viewcode").css("display", null);
+            $("#funcode").show();
             var currentMapCode = $("#viewcode_map").val();
             var currentReduceCode = $("#viewcode_reduce").val() || null;
             if (currentReduceCode) {
@@ -638,6 +714,14 @@
               var viewParts = viewName.split('/');
               db.view(viewParts[1]+'/'+viewParts[3], options);
             }
+          } else if (viewName.match(/^_design\/.+\/_list\//)){
+            $("#listcode").css("display", null);
+            $("#funcode").show().removeClass("collapsed");
+            $.get(db.uri + viewName, $.couch.encodeOptions(options),
+                  function(resp) {
+              var tr = $("<tr></tr>").text(resp);
+              tr.appendTo("#documents tbody.content");
+            });
           }
         }
       }
