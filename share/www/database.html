@@ -71,6 +71,29 @@ specific language governing permissions and limitations under the License.
           horizontal: true
         });
 
+
+        $("#listcode span").click(function() {
+          $("#listcode").toggleClass("collapsed");
+        });
+        $("#listcode button.run").click(function() {
+          page.updateDocumentListing();
+        });
+        $("#listcode button.revert").click(function() {
+          page.revertViewChanges();
+        });
+        $("#listcode button.save").click(function() {
+          page.saveViewChanges();
+        });
+        $("#listcode button.saveas").click(function() {
+          page.saveViewAs();
+        });
+        $("#listcode textarea").makeResizable({
+          always: true,
+          grippie: $("#listcode .bottom"),
+          vertical: true
+        });
+
+
         // Restore preferences/state from cookies
         var desc = $.cookies.get(page.db.name + ".desc");
         if (desc) $("#documents thead th.key").addClass("desc");
@@ -79,10 +102,12 @@ specific language governing permissions and limitations under the License.
 
         page.populateViewsMenu();
         page.populateViewEditor();
+        page.populateListEditor();
         if (!page.isTempView) {
           page.updateDocumentListing();
         } else {
           $("#viewcode").show().removeClass("collapsed").find("textarea")[0].focus();
+          $("#listcode").show().removeClass("collapsed").find("textarea")[0].focus();
           $("#documents").hide();
         }
 
@@ -153,7 +178,7 @@ specific language governing permissions and limitations under the License.
 
       <div id="viewcode" class="collapsed" style="display: none">
         <div class="top">
-          <a id="designdoc-link"></a>
+          <a class="designdoc-link"></a>
           <span id="view-toggle">View Code</span>
         </div>
         <table summary="View functions" cellspacing="0"><tr>
@@ -182,6 +207,25 @@ specific language governing permissions and limitations under the License.
         view to experiment with view functions, but switch to a permanent view
         before using them in an application.
       </p>
+
+      <div id="listcode" class="collapsed" style="display: none">
+        <div class="top">
+          <a class="designdoc-link"></a>
+          <span>View Code</span>
+        </div>
+        <div class="code">
+          <label for="listcode_fun">List Function:</label>
+          <textarea id="listcode_fun" class="list" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
+        </div>
+        <div class="bottom">
+          <button class="save" type="button" disabled>Save</button>
+          <button class="saveas" type="button">Save As…</button>
+          <button class="revert" type="button" disabled>Revert</button>
+          <button class="run" type="button">Run</button>
+          <label>Language: <select id="language"></select></label>
+        </div>
+      </div>
+
 
       <table id="documents" class="listing" cellspacing="0">
         <caption>Documents</caption>
