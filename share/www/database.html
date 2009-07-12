@@ -57,7 +57,11 @@ specific language governing permissions and limitations under the License.
         if (!page.isTempView) {
           page.updateDocumentListing();
         } else {
-          $("#viewcode").show().removeClass("collapsed").find("textarea")[0].focus();
+          $("#funcode")
+            .show()
+            .removeClass("collapsed")
+            .addClass("view")
+            .find("textarea")[0].focus();
           $("#documents").hide();
         }
 
