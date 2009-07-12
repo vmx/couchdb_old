@@ -407,7 +407,7 @@
                     page.isDirty = false;
                     location.href = "database.html?" + encodeURIComponent(dbName) +
                       "/" + encodeDocId(doc._id) +
-                      "/" + encodeURIComponent(data.name);
+                      "/_view/" + encodeURIComponent(data.name);
                   }
                 });
               }
@@ -493,19 +493,19 @@
           // TODO rename viewName variable, as it could be _list as well
           var listNameParts = viewName.split("/");
           var designDocId = listNameParts[1];
-          //var localListName = listNameParts.slice(3,5).join("/");
           var localListName = listNameParts[3];
           var localViewName = listNameParts[4];
           db.openDoc(["_design", designDocId].join("/"), {
             error: function(status, error, reason) {
               if (status == 404) {
-                $.cookies.remove(dbName + ".list");
+                $.cookies.remove(dbName + ".view");
                 location.href = "database.html?" + encodeURIComponent(db.name);
               }
             },
             success: function(resp) {
-              if(!resp.lists || !resp.lists[localListName]) {
-                $.cookies.remove(dbName + ".list");
+              if(!resp.lists || !resp.lists[localListName] ||
+                 !resp.views || !resp.views[localViewName]) {
+                $.cookies.remove(dbName + ".view");
                 location.href = "database.html?" + encodeURIComponent(db.name);
               }
               var listCode = resp.lists[localListName];
@@ -528,6 +528,132 @@
         $("#listcode_fun").val(listFun);
         var lines = listFun.split("\n").length;
         $("#listcode textarea").attr("rows", Math.min(15, Math.max(3, lines)));
+      };
+
+      this.saveListChanges = function() {
+        var listNameParts = viewName.split("/");
+        var designDocId = listNameParts[1];
+        var localListName = listNameParts[3];
+        var localViewName = listNameParts[4];
+        db.openDoc(["_design", designDocId].join("/"), {
+          success: function(doc) {
+            var numLists = 0;
+            for (var listName in (doc.lists || {})) {
+              if (listName != localListName) numLists++;
+            }
+            if (numLists > 0 && page.viewLanguage != doc.language) {
+              alert("Cannot save view because the design document language " +
+                    "is \"" + doc.language + "\", not \"" +
+                    page.viewLanguage + "\".");
+              return;
+            }
+            doc.language = page.viewLanguage;
+            doc.lists[localListName] = $("#listcode_fun").val();
+            db.saveDoc(doc, {
+              success: function(resp) {
+                page.isDirty = false;
+                $("#funcode button.revert, #funcode button.save")
+                  .attr("disabled", "disabled");
+              }
+            });
+          }
+        });
+      };
+
+      this.saveListAs = function() {
+        if (viewName && /^_design/.test(viewName)) {
+          var viewNameParts = viewName.split("/");
+          var designDocId = viewNameParts[1];
+          var localListName = viewNameParts[3];
+          var localViewName = viewNameParts[4];
+        } else {
+          var designDocId = "", localListName = "";
+        }
+        $.showDialog("dialog/_save_list_as.html", {
+          load: function(elem) {
+            $("#input_docid", elem).val(designDocId).suggest(function(text, callback) {
+              db.allDocs({
+                limit: 10, startkey: "_design/" + text, endkey: "_design0",
+                success: function(docs) {
+                  var matches = [];
+                  for (var i = 0; i < docs.rows.length; i++) {
+                    var docName = docs.rows[i].id.substr(8);
+                    if (docName.indexOf(text) == 0) {
+                      matches[i] = docName;
+                    }
+                  }
+                  callback(matches);
+                }
+              });
+            });
+            $("#input_name", elem).val(localListName).suggest(function(text, callback) {
+              db.openDoc("_design/" + $("#input_docid").val(), {
+                error: function() {}, // ignore
+                success: function(doc) {
+                  var matches = [];
+                  if (!doc.lists) return;
+                  for (var listName in doc.lists) {
+                    if (listName.indexOf(text) == 0) {
+                      matches.push(listName);
+                    }
+                  }
+                  callback(matches);
+                }
+              });
+            });
+          },
+          submit: function(data, callback) {
+            if (!data.docid || !data.name) {
+              var errors = {};
+              if (!data.docid) errors.docid = "Please enter a document ID";
+              if (!data.name) errors.name = "Please enter a list name";
+              callback(errors);
+            } else {
+              var listCode = $("#listcode_fun").val();
+              var docId = ["_design", data.docid].join("/");
+              function save(doc) {
+                if (!doc) {
+                  doc = {_id: docId, language: page.viewLanguage};
+                } else {
+                  var numLists = 0;
+                  for (var listName in (doc.lists || {})) {
+                    if (listName != data.name) numLists++;
+                  }
+                  if (numLists > 0 && page.viewLanguage != doc.language) {
+                    callback({
+                      docid: "Cannot save to " + data.docid +
+                             " because its language is \"" + doc.language +
+                             "\", not \"" + page.viewLanguage + "\"."
+                    });
+                    return;
+                  }
+                  doc.language = page.viewLanguage;
+                }
+                if (doc.lists === undefined) doc.views = {};
+                doc.lists[data.name] = listCode;
+                db.saveDoc(doc, {
+                  success: function(resp) {
+                    callback();
+                    page.isDirty = false;
+                    location.href = "database.html?" + encodeURIComponent(dbName) +
+                      "/" + encodeDocId(doc._id) +
+                      "/_list/" + encodeURIComponent(data.name) +
+                      "/" + encodeURIComponent(localViewName);
+                  }
+                });
+              }
+              db.openDoc(docId, {
+                error: function(status, error, reason) {
+                  if (status == 404) save(null);
+                  else alert(reason);
+                },
+                success: function(doc) {
+                  save(doc);
+                }
+              });
+            }
+          }
+        });
       };
 
       this.updateDesignDocLink = function() {
@@ -683,8 +809,10 @@
           db.allDocs(options);
         } else {
           if (viewName == "_temp_view") {
-            $("#viewcode").css("display", null);
-            $("#funcode").show().removeClass("collapsed");
+            $("#funcode")
+              .show()
+              .removeClass("collapsed")
+              .addClass("view");
             var mapFun = $("#viewcode_map").val();
             $.cookies.set(db.name + ".map", mapFun);
             var reduceFun = $("#viewcode_reduce").val() || null;
@@ -701,8 +829,9 @@
             options.endkey = options.descending ? "_design" : "_design0";
             db.allDocs(options);
           } else if (viewName.match(/^_design\/.+\/_view\//)){
-            $("#viewcode").css("display", null);
-            $("#funcode").show();
+            $("#funcode")
+              .show()
+              .addClass("view");
             var currentMapCode = $("#viewcode_map").val();
             var currentReduceCode = $("#viewcode_reduce").val() || null;
             if (currentReduceCode) {
@@ -715,8 +844,10 @@
               db.view(viewParts[1]+'/'+viewParts[3], options);
             }
           } else if (viewName.match(/^_design\/.+\/_list\//)){
-            $("#listcode").css("display", null);
-            $("#funcode").show().removeClass("collapsed");
+            $("#funcode")
+              .show()
+              .removeClass("collapsed")
+              .addClass("list");
             $.get(db.uri + viewName, $.couch.encodeOptions(options),
                   function(resp) {
               var tr = $("<tr></tr>").text(resp);

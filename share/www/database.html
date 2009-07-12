@@ -45,32 +45,6 @@ specific language governing permissions and limitations under the License.
             "/" + viewPath);
         }
 
-        $("#funcode span").click(function() {
-          $("#funcode").toggleClass("collapsed");
-        });
-        $("#funcode button.run").click(function() {
-          page.updateDocumentListing
-        });
-        $("#funcode button.revert").click(function() {
-          page.revertViewChanges();
-        });
-        $("#funcode button.save").click(function() {
-          page.saveViewChanges();
-        });
-        $("#funcode button.saveas").click(function() {
-          page.saveViewAs();
-        });
-        $("#funcode textarea").makeResizable({
-          always: true,
-          grippie: $("#funcode .bottom"),
-          vertical: true
-        });
-        $("#funcode td.map").makeResizable({
-          always: true,
-          grippie: $("#funcode td.splitter"),
-          horizontal: true
-        });
-
         // Restore preferences/state from cookies
         var desc = $.cookies.get(page.db.name + ".desc");
         if (desc) $("#documents thead th.key").addClass("desc");
@@ -122,6 +96,45 @@ specific language governing permissions and limitations under the License.
 
         $("#jumpto input").keypress(page.jumpToDocument);
 
+        $("#funcode span").click(function() {
+          $("#funcode").toggleClass("collapsed");
+        });
+        $("#funcode textarea").makeResizable({
+          always: true,
+          grippie: $("#funcode .bottom"),
+          vertical: true
+        });
+
+        $("#funcode.view button.run").click(function() {
+          page.updateDocumentListing()
+        });
+        $("#funcode.view button.revert").click(function() {
+          page.revertViewChanges();
+        });
+        $("#funcode.view button.save").click(function() {
+          page.saveViewChanges();
+        });
+        $("#funcode.view button.saveas").click(function() {
+          page.saveViewAs();
+        });
+        $("#funcode.view td.map").makeResizable({
+          always: true,
+          grippie: $("#funcode td.splitter"),
+          horizontal: true
+        });
+
+        $("#funcode.list button.run").click(function() {
+          page.updateDocumentListing()
+        });
+        $("#funcode.list button.revert").click(function() {
+          page.revertListChanges();
+        });
+        $("#funcode.list button.save").click(function() {
+          page.saveListChanges();
+        });
+        $("#funcode.list button.saveas").click(function() {
+          page.saveListAs();
+        });
       });
 
     </script>
@@ -157,7 +170,7 @@ specific language governing permissions and limitations under the License.
           <a class="designdoc-link"></a>
           <span id="view-toggle">View Code</span>
         </div>
-        <table id="viewcode" summary="View functions" cellspacing="0" style="display: none"><tr>
+        <table id="viewcode" summary="View functions" cellspacing="0"><tr>
           <td class="code map">
             <label for="viewcode_map">Map Function:</label>
             <textarea id="viewcode_map" class="map" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
@@ -168,7 +181,7 @@ specific language governing permissions and limitations under the License.
             <textarea id="viewcode_reduce" class="reduce" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
           </td>
         </tr></table>
-        <div id="listcode" class="code" style="display: none">
+        <div id="listcode" class="code">
           <label for="listcode_fun">List Function:</label>
           <textarea id="listcode_fun" class="list" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
         </div>
@@ -187,25 +200,6 @@ specific language governing permissions and limitations under the License.
         view to experiment with view functions, but switch to a permanent view
         before using them in an application.
       </p>
-<!--
-      <div id="listcode" class="collapsed" style="display: none">
-        <div class="top">
-          <a class="designdoc-link"></a>
-          <span>View Code</span>
-        </div>
-        <div class="code">
-          <label for="listcode_fun">List Function:</label>
-          <textarea id="listcode_fun" class="list" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
-        </div>
-        <div class="bottom">
-          <button class="save" type="button" disabled>Save</button>
-          <button class="saveas" type="button">Save As…</button>
-          <button class="revert" type="button" disabled>Revert</button>
-          <button class="run" type="button">Run</button>
-          <label>Language: <select id="language"></select></label>
-        </div>
-      </div>
--->
 
       <table id="documents" class="listing" cellspacing="0">
         <caption>Documents</caption>

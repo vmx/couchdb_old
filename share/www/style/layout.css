@@ -393,6 +393,10 @@ ul.suggest-dropdown li.selected { cursor: pointer; background: Highlight;
 #funcode.collapsed .top span { background-position: 0 3px; }
 #funcode.collapsed .code, #funcode.collapsed .bottom { display: none; }
 
+#funcode #viewcode, #funcode #listcode { display: none; }
+#funcode.view #viewcode { display: table; }
+#funcode.list #listcode { display: block; }
+
 
 /* Database table */
 
