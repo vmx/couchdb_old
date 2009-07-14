@@ -503,11 +503,38 @@
               }
             },
             success: function(resp) {
-              if(!resp.lists || !resp.lists[localListName] ||
-                 !resp.views || !resp.views[localViewName]) {
+              //if(!resp.lists || !resp.lists[localListName] ||
+              if (!resp.lists || (localListName && !resp.lists[localListName]) ||
+                  !resp.views || (localViewName && !resp.views[localViewName])) {
                 $.cookies.remove(dbName + ".view");
                 location.href = "database.html?" + encodeURIComponent(db.name);
               }
+
+              if (!localListName) {
+                $.showDialog("dialog/_select_list_fun.html", {
+                  load: function(elem) {
+                    var select = $("select", elem);
+                    db.openDoc(["_design", designDocId].join("/"), {
+                      success: function(doc) {
+                        for (var name in doc.lists) {
+                          var option = $(document.createElement("option"))
+                            .attr("value",
+                                  "_design/" + encodeURIComponent(designDocId) +
+                                  "/_list/" + encodeURIComponent(name) +
+                                  "/" + encodeURIComponent(localViewName))
+                            .text(name)
+                            .appendTo(select);
+                        }
+                      }
+                    });
+                  },
+                  submit: function(data, callback) {
+                    location.href = "database.html?"
+                      + encodeURIComponent(page.db.name) + "/" + data.path;
+                  }
+                });
+              }
+
               var listCode = resp.lists[localListName];
               $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
               page.storedListCode = listCode;
@@ -651,6 +678,28 @@
                   save(doc);
                 }
               });
+            }
+          }
+        });
+      };
+
+      this.populateListViewsMenu = function() {
+        var viewNameParts = viewName.split("/");
+        var designDocId = viewNameParts[1];
+        var localListName = viewNameParts[3];
+        var localViewName = viewNameParts[4];
+        var select = $("#list-view select");
+        db.openDoc(["_design", designDocId].join("/"), {
+          success: function(doc) {
+            var listPath = viewNameParts.slice(0,4).join("/");
+            for (var name in doc.views) {
+              var option = $(document.createElement("option"))
+                .attr("value", listPath + "/" + name)
+                .text(name)
+                .appendTo(select);
+              if (listPath + "/" + name == viewName) {
+                option[0].selected = true;
+              }
             }
           }
         });
@@ -848,8 +897,10 @@
               .show()
               .removeClass("collapsed")
               .addClass("list");
-            $.get(db.uri + viewName, $.couch.encodeOptions(options),
-                  function(resp) {
+            var selectedListView = $("#list-view select").val();
+            //$.get(db.uri + viewName,
+            $.get(db.uri + selectedListView,
+                  $.couch.encodeOptions(options).substring(1), function(resp) {
               var tr = $("<tr></tr>").text(resp);
               tr.appendTo("#documents tbody.content");
             });

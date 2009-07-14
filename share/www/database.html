@@ -45,6 +45,19 @@ specific language governing permissions and limitations under the License.
             "/" + viewPath);
         }
 
+        var viewNameParts = page.viewName.split("/");
+        var designDocId = viewNameParts[1];
+        var viewType = viewNameParts[2];
+        var localViewName = viewNameParts[3];
+        var localListName = "";
+        if (viewType=="_list") {
+          localListName = viewNameParts[3];
+          localViewName = viewNameParts[4];
+        }
+      
+
+        var select = $("#list-view select");
+
         // Restore preferences/state from cookies
         var desc = $.cookies.get(page.db.name + ".desc");
         if (desc) $("#documents thead th.key").addClass("desc");
@@ -52,6 +65,7 @@ specific language governing permissions and limitations under the License.
         if (rowsPerPage) $("#perpage").val(rowsPerPage);
 
         page.populateViewsMenu();
+        page.populateListViewsMenu();
         page.populateViewEditor();
         page.populateListEditor();
         if (!page.isTempView) {
@@ -99,6 +113,29 @@ specific language governing permissions and limitations under the License.
         });
 
         $("#jumpto input").keypress(page.jumpToDocument);
+
+        $("#list-view select").change(function() {
+          var viewName = $(this).val();
+          if (!viewName) $.cookies.remove(page.db.name + ".view");
+          location.href = "?" + encodeURIComponent(page.db.name) +
+            (viewName ? "/" + encodeURIComponent(viewName)  : "");
+        });
+
+        $("#designdocbar .view a").attr("href",
+          "?" + encodeURIComponent(page.db.name) +
+          "/_design/" + encodeURIComponent(designDocId) +
+          "/_view/" + encodeURIComponent(localViewName));
+        $("#designdocbar .list a").attr("href",
+          "?" + encodeURIComponent(page.db.name) +
+          "/_design/" + encodeURIComponent(designDocId) +
+          "/_list/" + (localListName ? encodeURIComponent(localListName) : "") +
+          "/" + encodeURIComponent(localViewName));
+        if (viewType=="_view") {
+           $("#designdocbar .view").addClass("selected");
+        }
+        else if (viewType=="_list") {
+           $("#designdocbar .list").addClass("selected");
+        }
 
         $("#funcode span").click(function() {
           $("#funcode").toggleClass("collapsed");
@@ -163,10 +200,18 @@ specific language governing permissions and limitations under the License.
           <input type="text" name="docid" />
         </label>
       </div>
+      <div id="list-view">
+        <label>Select List View: <select></select></label>
+      </div>
       <ul id="toolbar">
         <li><button class="add">Create Document …</button></li>
         <li><button class="compact">Compact Database</button></li>
         <li><button class="delete">Delete Database</button></li>
+      </ul>
+
+      <ul id="designdocbar">
+        <li class="view"><a href="df">Map/Reduce</a></li>
+        <li class="list"><a href="ad">List</a></li>
       </ul>
 
       <div id="funcode" class="collapsed" style="display: none">
@@ -185,10 +230,12 @@ specific language governing permissions and limitations under the License.
             <textarea id="viewcode_reduce" class="reduce" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
           </td>
         </tr></table>
-        <div id="listcode" class="code">
+        <div id="listcode"  class="code">
+        
           <label for="listcode_fun">List Function:</label>
           <textarea id="listcode_fun" class="list" rows="5" cols="20" spellcheck="false" wrap="off"></textarea>
         </div>
+
         <div class="bottom">
           <button class="save" type="button" disabled>Save</button>
           <button class="saveas" type="button">Save As…</button>
