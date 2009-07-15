@@ -490,7 +490,6 @@
 
       this.revertListChanges = function(callback) {
         if (!page.storedListCode) {
-          // TODO rename viewName variable, as it could be _list as well
           var listNameParts = viewName.split("/");
           var designDocId = listNameParts[1];
           var localListName = listNameParts[3];
@@ -866,15 +865,17 @@
               db.view(viewParts[1]+'/'+viewParts[3], options);
             }
           } else if (viewName.match(/^_design\/.+\/_list\//)){
-            $("#funcode")
-              .show()
-              .removeClass("collapsed")
-              .addClass("list");
-
             var viewNameParts = viewName.split("/");
             var designDocId = viewNameParts[1];
             var localListName = viewNameParts[3];
             var localViewName = viewNameParts[4];
+
+            $("#funcode")
+              .show()
+              .addClass("list");
+
+            if (localListName)
+              $("#funcode").removeClass("collapsed");
 
             var select = $("#select-list-fun select");
             db.openDoc(["_design", designDocId].join("/"), {
