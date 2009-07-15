@@ -870,10 +870,10 @@
             var localListName = viewNameParts[3];
             var localViewName = viewNameParts[4];
 
+            $("#documents").hide();
             $("#funcode")
               .show()
               .addClass("list");
-
             if (localListName)
               $("#funcode").removeClass("collapsed");
 
@@ -905,8 +905,9 @@
             var selectedListView = $("#list-view").val();
             $.get(db.uri + selectedListView,
                   $.couch.encodeOptions(options).substring(1), function(resp) {
-              var tr = $("<tr></tr>").text(resp);
-              tr.appendTo("#documents tbody.content");
+              var tr = $("<tr><td>" + resp + "</td></tr>");
+              tr.appendTo("#list-documents tbody.content");
+              $("#list-documents").show();
             });
           }
         }
