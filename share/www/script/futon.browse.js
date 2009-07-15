@@ -503,38 +503,11 @@
               }
             },
             success: function(resp) {
-              //if(!resp.lists || !resp.lists[localListName] ||
               if (!resp.lists || (localListName && !resp.lists[localListName]) ||
                   !resp.views || (localViewName && !resp.views[localViewName])) {
                 $.cookies.remove(dbName + ".view");
                 location.href = "database.html?" + encodeURIComponent(db.name);
               }
-
-              if (!localListName) {
-                $.showDialog("dialog/_select_list_fun.html", {
-                  load: function(elem) {
-                    var select = $("select", elem);
-                    db.openDoc(["_design", designDocId].join("/"), {
-                      success: function(doc) {
-                        for (var name in doc.lists) {
-                          var option = $(document.createElement("option"))
-                            .attr("value",
-                                  "_design/" + encodeURIComponent(designDocId) +
-                                  "/_list/" + encodeURIComponent(name) +
-                                  "/" + encodeURIComponent(localViewName))
-                            .text(name)
-                            .appendTo(select);
-                        }
-                      }
-                    });
-                  },
-                  submit: function(data, callback) {
-                    location.href = "database.html?"
-                      + encodeURIComponent(page.db.name) + "/" + data.path;
-                  }
-                });
-              }
-
               var listCode = resp.lists[localListName];
               $("#funcode button.revert, #funcode button.save").attr("disabled", "disabled");
               page.storedListCode = listCode;
