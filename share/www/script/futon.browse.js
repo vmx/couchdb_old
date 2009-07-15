@@ -260,7 +260,9 @@
                     var option = $(document.createElement("option"))
                       .attr("value", doc._id + "/_view/" + name).text(name)
                       .appendTo(optGroup);
-                    if (doc._id + "/_view/" + name == viewName) {
+                    var listRe = new RegExp("^" + doc._id + "/_list/.*/" + name);
+                    if ((doc._id + "/_view/" + name == viewName) ||
+                      viewName.match(listRe)) {
                       option[0].selected = true;
                     }
                   }
