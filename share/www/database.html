@@ -54,9 +54,7 @@ specific language governing permissions and limitations under the License.
           localListName = viewNameParts[3];
           localViewName = viewNameParts[4];
         }
-      
 
-        var select = $("#list-view select");
 
         // Restore preferences/state from cookies
         var desc = $.cookies.get(page.db.name + ".desc");
@@ -114,7 +112,7 @@ specific language governing permissions and limitations under the License.
 
         $("#jumpto input").keypress(page.jumpToDocument);
 
-        $("#list-view select").change(function() {
+        $("#list-view").change(function() {
           var viewName = $(this).val();
           if (!viewName) $.cookies.remove(page.db.name + ".view");
           location.href = "?" + encodeURIComponent(page.db.name) +
@@ -200,9 +198,6 @@ specific language governing permissions and limitations under the License.
           <input type="text" name="docid" />
         </label>
       </div>
-      <div id="list-view">
-        <label>Select List View: <select></select></label>
-      </div>
       <ul id="toolbar">
         <li><button class="add">Create Document …</button></li>
         <li><button class="compact">Compact Database</button></li>
@@ -210,11 +205,15 @@ specific language governing permissions and limitations under the License.
       </ul>
 
       <ul id="designdocbar">
-        <li class="view"><a href="df">Map/Reduce</a></li>
-        <li class="list"><a href="ad">List</a></li>
+        <li class="view"><a href="">Map/Reduce</a></li>
+        <li class="list"><a href="">List</a></li>
       </ul>
 
       <div id="funcode" class="collapsed" style="display: none">
+        <div id="select-list-fun" class="list">
+          <label>Select list function: <select>
+            <option value="">Please select…</option></select></label>
+        </div>
         <div class="top">
           <a class="designdoc-link"></a>
           <span id="view-toggle">View Code</span>
@@ -240,7 +239,8 @@ specific language governing permissions and limitations under the License.
           <button class="save" type="button" disabled>Save</button>
           <button class="saveas" type="button">Save As…</button>
           <button class="revert" type="button" disabled>Revert</button>
-          <button class="run" type="button">Run</button>
+          <button class="run" type="button">Run</button>on
+          <label>view: <select id="list-view"></select></label>
           <label>Language: <select id="language"></select></label>
         </div>
       </div>

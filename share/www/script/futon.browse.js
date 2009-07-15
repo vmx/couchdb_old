@@ -688,7 +688,7 @@
         var designDocId = viewNameParts[1];
         var localListName = viewNameParts[3];
         var localViewName = viewNameParts[4];
-        var select = $("#list-view select");
+        var select = $("#list-view");
         db.openDoc(["_design", designDocId].join("/"), {
           success: function(doc) {
             var listPath = viewNameParts.slice(0,4).join("/");
@@ -897,8 +897,38 @@
               .show()
               .removeClass("collapsed")
               .addClass("list");
-            var selectedListView = $("#list-view select").val();
-            //$.get(db.uri + viewName,
+
+            var viewNameParts = viewName.split("/");
+            var designDocId = viewNameParts[1];
+            var localListName = viewNameParts[3];
+            var localViewName = viewNameParts[4];
+
+            var select = $("#select-list-fun select");
+            db.openDoc(["_design", designDocId].join("/"), {
+              success: function(doc) {
+                for (var name in doc.lists) {
+                  var option = $(document.createElement("option"))
+                    .attr("value",
+                          "_design/" + encodeURIComponent(designDocId) +
+                          "/_list/" + encodeURIComponent(name) +
+                          "/" + encodeURIComponent(localViewName))
+                    .text(name)
+                    .appendTo(select);
+                  if (name == localListName) {
+                    option[0].selected = true;
+                    // remove "Please select..."
+                    select.children(":first").remove();
+                  }
+                }
+              }
+            });
+            select.change(function() {
+              var viewName = $(this).val();
+              location.href = "?" + encodeURIComponent(page.db.name) +
+                "/" + viewName;
+            });
+
+            var selectedListView = $("#list-view").val();
             $.get(db.uri + selectedListView,
                   $.couch.encodeOptions(options).substring(1), function(resp) {
               var tr = $("<tr></tr>").text(resp);
