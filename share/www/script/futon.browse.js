@@ -911,12 +911,16 @@
               $("#funcode").removeClass("collapsed");
 
             var selectedListView = $("#list-view").val();
-            $.get(db.uri + selectedListView,
-              $.couch.encodeOptions(options).substring(1), function(resp) {
-              var tr = $("<tr><td>" + resp + "</td></tr>");
-              $("#list-documents tbody.content").empty().append(tr);
-              //tr.appendTo("#list-documents tbody.content");
-              $("#list-documents").show();
+            $.ajax({
+              type: "GET",
+              url: db.uri + selectedListView,
+              data: $.couch.encodeOptions(options).substring(1),
+              complete: function(xhr, textStatus) {
+                var tr = $("<tr><td>" + xhr.responseText + "</td></tr>");
+                $("#list-documents tbody.content").empty().append(tr);
+                //tr.appendTo("#list-documents tbody.content");
+                $("#list-documents").show();
+              }
             });
           }
         }
