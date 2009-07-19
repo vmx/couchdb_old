@@ -687,25 +687,27 @@
       };
 
       this.populateListViewsMenu = function() {
-        var viewNameParts = viewName.split("/");
-        var designDocId = viewNameParts[1];
-        var localListName = viewNameParts[3];
-        var localViewName = viewNameParts[4];
-        var select = $("#list-view");
-        db.openDoc(["_design", designDocId].join("/"), {
-          success: function(doc) {
-            var listPath = viewNameParts.slice(0,4).join("/");
-            for (var name in doc.views) {
-              var option = $(document.createElement("option"))
-                .attr("value", listPath + "/" + name)
-                .text(name)
-                .appendTo(select);
-              if (listPath + "/" + name == viewName) {
-                option[0].selected = true;
+        if (viewName && /^_design\//.test(viewName)) {
+          var viewNameParts = viewName.split("/");
+          var designDocId = viewNameParts[1];
+          var localListName = viewNameParts[3];
+          var localViewName = viewNameParts[4];
+          var select = $("#list-view");
+          db.openDoc(["_design", designDocId].join("/"), {
+            success: function(doc) {
+              var listPath = viewNameParts.slice(0,4).join("/");
+              for (var name in doc.views) {
+                var option = $(document.createElement("option"))
+                  .attr("value", listPath + "/" + name)
+                  .text(name)
+                  .appendTo(select);
+                if (listPath + "/" + name == viewName) {
+                  option[0].selected = true;
+                }
               }
             }
-          }
-        });
+          });
+        }
       };
 
       this.updateDesignDocLink = function() {
@@ -881,6 +883,7 @@
             options.endkey = options.descending ? "_design" : "_design0";
             db.allDocs(options);
           } else if (viewName.match(/^_design\/.+\/_view\//)){
+            $("#designdocbar").show();
             $("#funcode")
               .show()
               .addClass("view");
@@ -900,6 +903,7 @@
             var localListName = viewNameParts[3];
 
             $("#documents").hide();
+            $("#designdocbar").show();
             $("#funcode")
               .show()
               .addClass("list");
