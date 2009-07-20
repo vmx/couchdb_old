@@ -533,7 +533,8 @@
               }
             },
             success: function(resp) {
-              if (!resp.lists || (localListName && !resp.lists[localListName]) ||
+              if (!resp.lists) return;
+              if ((localListName && !resp.lists[localListName]) ||
                   !resp.views || (localViewName && !resp.views[localViewName])) {
                 $.cookies.remove(dbName + ".view");
                 location.href = "database.html?" + encodeURIComponent(db.name);
@@ -906,9 +907,8 @@
             $("#designdocbar").show();
             $("#funcode")
               .show()
-              .addClass("list");
-            if (localListName)
-              $("#funcode").removeClass("collapsed");
+              .addClass("list")
+              .removeClass("collapsed");
 
             var selectedListView = $("#list-view").val();
             $.ajax({
