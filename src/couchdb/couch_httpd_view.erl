@@ -20,6 +20,9 @@
 -export([view_group_etag/2, view_group_etag/3, make_reduce_fold_funs/5]).
 -export([design_doc_view/5, parse_bool_param/1]).
 
+% for _mix
+-export([apply_default_helper_funs/2]).
+
 -import(couch_httpd,
     [send_json/2,send_json/3,send_json/4,send_method_not_allowed/2,send_chunk/2,
     start_json_response/2, start_json_response/3, end_json_response/1,
@@ -241,6 +244,7 @@ get_reduce_type(Req) ->
 
 parse_view_params(Req, Keys, ViewType) ->
     QueryList = couch_httpd:qs(Req),
+    ?LOG_DEBUG("vmx: parse_view_params ~p", [QueryList]),
     QueryParams =
     lists:foldl(fun({K, V}, Acc) ->
             parse_view_param(K, V) ++ Acc
@@ -401,6 +405,7 @@ validate_view_query(extra, _Value, Args) ->
     Args.
 
 make_view_fold_fun(Req, QueryArgs, Etag, Db, TotalViewCount, HelperFuns) ->
+    %?LOG_DEBUG("vmx: make_view_fold_fun: Req: ~p", [Req]),
     #view_query_args{
         end_key = EndKey,
         end_docid = EndDocId,

@@ -14,6 +14,8 @@
 
 -export([handle_doc_show_req/2, handle_doc_update_req/2, handle_view_list_req/2,
         handle_doc_show/5, handle_view_list/6]).
+% for _mix
+-export([make_map_start_resp_fun/2, make_map_send_row_fun/1, finish_list/6]).
 
 -include("couch_db.hrl").
 
