@@ -15,7 +15,7 @@ couchTests.basics = function(debug) {
   var result = JSON.parse(CouchDB.request("GET", "/").responseText);
   T(result.couchdb == "Welcome");
 
-  var db = new CouchDB("test_suite_db");
+  var db = new CouchDB("test_suite_db", {"X-Couch-Full-Commit":"false"});
   db.deleteDb();
 
   // bug COUCHDB-100: DELETE on non-existent DB returns 500 instead of 404
@@ -160,6 +160,16 @@ couchTests.basics = function(debug) {
   var locs = loc.split('/');
   T(locs[4] == resp.id);
   T(locs[3] == "test_suite_db");
+
+  // test that that POST's with an _id aren't overriden with a UUID.
+  var xhr = CouchDB.request("POST", "/test_suite_db", {
+    body: JSON.stringify({"_id": "oppossum", "yar": "matey"})
+  });
+  var resp = JSON.parse(xhr.responseText);
+  T(resp.ok);
+  T(resp.id == "oppossum");
+  var doc = db.open("oppossum");
+  T(doc.yar == "matey");
 
   // document put's should return a Location header
   var xhr = CouchDB.request("PUT", "/test_suite_db/newdoc", {

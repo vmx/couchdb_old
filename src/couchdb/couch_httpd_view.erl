@@ -86,7 +86,7 @@ handle_db_view_req(#httpd{method='GET',
     case ListName of
         nil -> couch_httpd_view:design_doc_view(Req, Db, DName, ViewName, nil);
         _ ->
-            couch_httpd_show:handle_view_list(Req, DName, ListName, ViewName, Db, nil)
+            couch_httpd_show:handle_view_list(Req, DName, ListName, DName, ViewName, Db, nil)
     end;
 
 handle_db_view_req(#httpd{method='POST',
@@ -113,7 +113,7 @@ handle_db_view_req(#httpd{method='POST',
         {Props2} = ?JSON_DECODE(ReqBody),
         Keys = proplists:get_value(<<"keys">>, Props2, nil),
         couch_httpd_show:handle_view_list(Req#httpd{req_body=ReqBody},
-            DName, ListName, ViewName, Db, Keys)
+            DName, ListName, DName, ViewName, Db, Keys)
     end;
 
 handle_db_view_req(Req, _Db) ->
@@ -616,7 +616,7 @@ send_json_reduce_row(Resp, {Key, Value}, RowFront) ->
 view_group_etag(Group, Db) ->
     view_group_etag(Group, Db, nil).
 
-view_group_etag(#group{sig=Sig,current_seq=CurrentSeq}, Db, Extra) ->
+view_group_etag(#group{sig=Sig,current_seq=CurrentSeq}, _Db, Extra) ->
     % ?LOG_ERROR("Group ~p",[Group]),
     % This is not as granular as it could be.
     % If there are updates to the db that do not effect the view index,

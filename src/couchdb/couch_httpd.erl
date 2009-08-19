@@ -173,20 +173,11 @@ handle_request(MochiReq, DefaultFun,
 
     {ok, Resp} =
     try
-        % Try authentication handlers in order until one returns a result
-        case lists:foldl(fun(_Fun, #httpd{user_ctx=#user_ctx{}}=Req) -> Req;
-                    (Fun, #httpd{}=Req) -> Fun(Req);
-                    (_Fun, Response) -> Response
-                end, HttpReq, AuthenticationFuns) of
-            #httpd{user_ctx=#user_ctx{}}=Req -> HandlerFun(Req);
-            #httpd{}=Req ->
-                case couch_config:get("couch_httpd_auth", "require_valid_user", "false") of
-                    "true" ->
-                        throw({unauthorized, <<"Authentication required.">>});
-                    _ ->
-                        HandlerFun(Req#httpd{user_ctx=#user_ctx{}})
-                end;
-            Response -> Response
+        case authenticate_request(HttpReq, AuthenticationFuns) of
+        Req when is_record(Req, httpd) ->
+            HandlerFun(Req);
+        Response ->
+            Response
         end
     catch
         throw:Error ->
@@ -217,6 +208,21 @@ handle_request(MochiReq, DefaultFun,
     couch_stats_collector:record({couchdb, request_time}, RequestTime),
     couch_stats_collector:increment({httpd, requests}),
     {ok, Resp}.
+
+% Try authentication handlers in order until one returns a result
+authenticate_request(#httpd{user_ctx=#user_ctx{}} = Req, _AuthFuns) ->
+    Req;
+authenticate_request(#httpd{} = Req, []) ->
+    case couch_config:get("couch_httpd_auth", "require_valid_user", "false") of
+    "true" ->
+        throw({unauthorized, <<"Authentication required.">>});
+    "false" ->
+        Req#httpd{user_ctx=#user_ctx{}}
+    end;
+authenticate_request(#httpd{} = Req, [AuthFun|Rest]) ->
+    authenticate_request(AuthFun(Req), Rest);
+authenticate_request(Response, _AuthFuns) ->
+    Response.
 
 increment_method_stats(Method) ->
     couch_stats_collector:increment({httpd_request_methods, Method}).
@@ -256,10 +262,16 @@ path(#httpd{mochi_req=MochiReq}) ->
     MochiReq:get(path).
 
 absolute_uri(#httpd{mochi_req=MochiReq}, Path) ->
-    Host = case MochiReq:get_header_value("Host") of
+    XHost = couch_config:get("httpd", "x_forwarded_host", "X-Forwarded-Host"),
+    Host = case MochiReq:get_header_value(XHost) of
         undefined ->
-            {ok, {Address, Port}} = inet:sockname(MochiReq:get(socket)),
-            inet_parse:ntoa(Address) ++ ":" ++ integer_to_list(Port);
+            case MochiReq:get_header_value("Host") of
+                undefined ->    
+                    {ok, {Address, Port}} = inet:sockname(MochiReq:get(socket)),
+                    inet_parse:ntoa(Address) ++ ":" ++ integer_to_list(Port);
+                Value1 ->
+                    Value1
+            end;
         Value -> Value
     end,
     "http://" ++ Host ++ Path.

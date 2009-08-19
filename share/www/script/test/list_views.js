@@ -11,7 +11,7 @@
 // the License.
 
 couchTests.list_views = function(debug) {
-  var db = new CouchDB("test_suite_db");
+  var db = new CouchDB("test_suite_db", {"X-Couch-Full-Commit":"false"});
   db.deleteDb();
   db.createDb();
   if (debug) debugger;
@@ -166,6 +166,17 @@ couchTests.list_views = function(debug) {
       })
     }
   };
+  var viewOnlyDesignDoc = {
+    _id:"_design/views",
+    language: "javascript",
+    views : {
+      basicView : {
+        map : stringFun(function(doc) {
+          emit(-doc.integer, doc.string);
+        })
+      }
+    }
+  };
 
   T(db.save(designDoc).ok);
 
@@ -257,10 +268,10 @@ couchTests.list_views = function(debug) {
   T(/LastKey: undefined/.test(xhr.responseText));
 
   // reduce with 0 rows
-   var xhr = CouchDB.request("GET", "/test_suite_db/_view/lists/withReduce?list=simpleForm&startkey=30");
-   T(xhr.status == 200, "reduce 0 rows");
-   T(/Total Rows/.test(xhr.responseText));
-   T(/LastKey: undefined/.test(xhr.responseText));
+  var xhr = CouchDB.request("GET", "/test_suite_db/_view/lists/withReduce?list=simpleForm&startkey=30");
+  T(xhr.status == 200, "reduce 0 rows");
+  T(/Total Rows/.test(xhr.responseText));
+  T(/LastKey: undefined/.test(xhr.responseText));
 
   // when there is a reduce present, but not used
   var xhr = CouchDB.request("GET", "/test_suite_db/_design/lists/_list/simpleForm/withReduce?reduce=false");
@@ -359,4 +370,13 @@ couchTests.list_views = function(debug) {
   T(xhr.getResponseHeader("Content-Type") == "application/xml");
   T(xhr.responseText.match(/XML/));
   T(xhr.responseText.match(/entry/));
+
+  // Test we can run lists and views from separate docs.
+  T(db.save(viewOnlyDesignDoc).ok);
+  xhr = CouchDB.request("GET", "/test_suite_db/_design/lists/_list/simpleForm/views/basicView?startkey=-3");
+  T(xhr.status == 200, "with query params");
+  T(/Total Rows/.test(xhr.responseText));
+  T(!(/Key: -4/.test(xhr.responseText)));
+  T(/FirstKey: -3/.test(xhr.responseText));
+  T(/LastKey: 0/.test(xhr.responseText));
 };

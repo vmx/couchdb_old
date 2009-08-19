@@ -81,6 +81,7 @@ loadTest("oauth.js");
 loadTest("stats.js");
 loadTest("rev_stemming.js");
 loadTest("erlang_views.js");
+loadTest("http.js");
 
 function makeDocs(start, end, templateDoc) {
   var templateDocSrc = templateDoc ? JSON.stringify(templateDoc) : "{}"
@@ -117,10 +118,16 @@ function run_on_modified_server(settings, fun) {
     // unset the settings
     for(var j=0; j < i; j++) {
       var s = settings[j];
-      CouchDB.request("PUT", "/_config/" + s.section + "/" + s.key, {
-        body: s.oldValue,
-        headers: {"X-Couch-Persist": "false"}
-      });
+      if(s.oldValue == "\"\"\n") { // unset value
+        CouchDB.request("DELETE", "/_config/" + s.section + "/" + s.key, {
+          headers: {"X-Couch-Persist": "false"}
+        });
+      } else {
+        CouchDB.request("PUT", "/_config/" + s.section + "/" + s.key, {
+          body: s.oldValue,
+          headers: {"X-Couch-Persist": "false"}
+        });
+      }
     }
   }
 }
