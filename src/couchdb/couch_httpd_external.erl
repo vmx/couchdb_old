@@ -16,6 +16,10 @@
 -export([send_external_response/2, json_req_obj/2]).
 -export([default_or_content_type/2, parse_external_response/1]).
 
+% for _mix
+-export([to_json_terms/1, json_req_obj/2]).
+
+
 -import(couch_httpd,[send_error/4]).
 
 -include("couch_db.hrl").

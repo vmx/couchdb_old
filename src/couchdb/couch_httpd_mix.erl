@@ -24,36 +24,7 @@
 
 process_external(HttpReq, Db, Name, Query) ->
     couch_external_manager:execute(binary_to_list(Name),
-        json_req_obj(HttpReq, Db, Query)).
-
-json_req_obj(#httpd{mochi_req=Req, 
-               method=Verb,
-               path_parts=Path,
-               req_body=ReqBody
-            }, Db, Query) ->
-    %Body = case ReqBody of
-    %    undefined -> Req:recv_body();
-    %    Else -> Else
-    %end,
-    %ParsedForm = case Req:get_primary_header_value("content-type") of
-    %    "application/x-www-form-urlencoded" ++ _ ->
-    %        mochiweb_util:parse_qs(ReqBody);
-    %    _ ->
-    %        []
-    %end,
-    Headers = Req:get(headers),
-    Hlist = mochiweb_headers:to_list(Headers),
-    {ok, Info} = couch_db:get_db_info(Db),
-    % add headers...
-    {[{<<"info">>, {Info}},
-        {<<"verb">>, Verb},
-        {<<"path">>, Path},
-        %{<<"query">>, {Query}}]}.
-        {<<"query">>, {kvlist_l2b(Query)}}]}.
-%        {<<"headers">>, couch_httpd_external:to_json_terms(Hlist)},
-%        {<<"body">>, Body},
-%        {<<"form">>, couch_httpd_external:to_json_terms(ParsedForm)},
-%        {<<"cookie">>, couch_httpd_external:to_json_terms(Req:parse_cookie())}}]}.
+        couch_httpd_external:json_req_obj(HttpReq, Db)).
 
 % example request
 % http://localhost:5984/geodata/_mix/normal/_external/geo/_list/geojson/all?limit=11&geom=location&bbox=0,50,11,51
@@ -234,8 +205,3 @@ output_map_list(#httpd{mochi_req=MReq, user_ctx=UserCtx}=Req, Lang, ListSrc, Vie
         couch_httpd_show:finish_list(Req, QueryServer, CurrentEtag, FoldResult, StartListRespFun, RowCount)
     end).
 
-kvlist_l2b(KVList) ->
-    lists:map(fun({Key, Value}) ->
-        {list_to_binary(Key), list_to_binary(Value)}
-    end,
-    KVList).
