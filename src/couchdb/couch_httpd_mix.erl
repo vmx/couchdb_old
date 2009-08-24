@@ -49,8 +49,6 @@ handle_mix_req(#httpd{method='GET',
 % http://localhost:5984/geodata3/_mix/normal/_view/all/_external/geo/normal?limit=11&geom=loc&bbox=0,50,11,51
 % _external/_view intersection
 handle_mix_req(#httpd{method='GET',
-%        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
-%                    _View, ViewName]}=Req, Db) ->
         path_parts=[_Db, _Mix, DesignName, <<"_view">>, ViewName,
                     _External, ExternalName | _ExternalPath]}=Req, Db) ->
 
