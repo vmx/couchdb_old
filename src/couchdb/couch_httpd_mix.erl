@@ -22,9 +22,7 @@
     query_ = nil
 }).
 
-% TODO reverse _external and _view/_list parameter
-
-process_external(HttpReq, Db, Name, Query) ->
+process_external(HttpReq, Db, Name) ->
     couch_external_manager:execute(binary_to_list(Name),
         couch_httpd_external:json_req_obj(HttpReq, Db)).
 
@@ -45,7 +43,7 @@ handle_mix_req(#httpd{method='GET',
     ListSrc = couch_util:get_nested_json_value({Props}, [<<"lists">>,
                                                                ListName]),
     send_view_list_response(Lang, ListSrc, ViewName, DesignId, Req, Db, nil,
-                            QueryList, ExternalProps);
+                            ExternalProps);
 
 % http://localhost:5984/geodata3/_mix/_external/geo/normal/_view/normal/all?limit=11&geom=loc&bbox=0,50,11,51
 % http://localhost:5984/geodata3/_mix/normal/_view/all/_external/geo/normal?limit=11&geom=loc&bbox=0,50,11,51
@@ -60,14 +58,13 @@ handle_mix_req(#httpd{method='GET',
     ExternalProps = #mix_settings_external{name=ExternalName,
                                            query_=QueryList},
 
-    design_doc_view(Req, Db, DesignName, ViewName, nil, QueryList,
-                    ExternalProps);
+    design_doc_view(Req, Db, DesignName, ViewName, nil, ExternalProps);
 
 handle_mix_req(Req, _Db) ->
     send_method_not_allowed(Req, "GET").
 
 
-design_doc_view(Req, Db, Id, ViewName, Keys, QueryList, ExternalProps) ->
+design_doc_view(Req, Db, Id, ViewName, Keys, ExternalProps) ->
     DesignId = <<"_design/", Id/binary>>,
     Stale = couch_httpd_view:get_stale_type(Req),
     Reduce = couch_httpd_view:get_reduce_type(Req),
@@ -121,11 +118,10 @@ make_view_fold_fun(Req, QueryArgs, Etag, Db,
     Fun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, Etag, Db,
                                               TotalViewCount, HelperFuns),
     #mix_settings_external{
-        name = ExternalName,
-        query_ = ExternalQuery
+        name = ExternalName
     } = ExternalProps,
 
-    Response = process_external(Req, Db, ExternalName, ExternalQuery),
+    Response = process_external(Req, Db, ExternalName),
     #extern_resp_args{
         data = Data
     } = couch_httpd_external:parse_external_response(Response),
@@ -148,7 +144,7 @@ end.
 
 
 send_view_list_response(Lang, ListSrc, ViewName, DesignId, Req, Db, Keys,
-                        QueryList, ExternalProps) ->
+                        ExternalProps) ->
     Stale = couch_httpd_view:get_stale_type(Req),
     Reduce = couch_httpd_view:get_reduce_type(Req),
     case couch_view:get_map_view(Db, DesignId, ViewName, Stale) of
