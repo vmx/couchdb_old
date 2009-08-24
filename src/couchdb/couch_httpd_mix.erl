@@ -22,20 +22,23 @@
     query_ = nil
 }).
 
+% TODO reverse _external and _view/_list parameter
+
 process_external(HttpReq, Db, Name, Query) ->
     couch_external_manager:execute(binary_to_list(Name),
         couch_httpd_external:json_req_obj(HttpReq, Db)).
 
 % example request
 % http://localhost:5984/geodata/_mix/normal/_external/geo/_list/geojson/all?limit=11&geom=location&bbox=0,50,11,51
+% http://localhost:5984/geodata3/_mix/normal/_list/geojson_nobbox/all/_external/geo/normal?limit=11&geom=loc&bbox=0,50,11,51
 % _external/_list intersection
 handle_mix_req(#httpd{method='GET',
-        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
-                    _List, ListName, ViewName]}=Req, Db) ->
+        path_parts=[_Db, _Mix, DesignName, <<"_list">>, ListName, ViewName,
+                    _External, ExternalName | _ExternalPath]}=Req, Db) ->
+
     QueryList = couch_httpd:qs(Req),
     ExternalProps = #mix_settings_external{name=ExternalName,
                                            query_=QueryList},
-
     DesignId = <<"_design/", DesignName/binary>>,
     #doc{body={Props}} = couch_httpd_db:couch_doc_open(Db, DesignId, nil, []),
     Lang = proplists:get_value(<<"language">>, Props, <<"javascript">>),
@@ -44,10 +47,15 @@ handle_mix_req(#httpd{method='GET',
     send_view_list_response(Lang, ListSrc, ViewName, DesignId, Req, Db, nil,
                             QueryList, ExternalProps);
 
+% http://localhost:5984/geodata3/_mix/_external/geo/normal/_view/normal/all?limit=11&geom=loc&bbox=0,50,11,51
+% http://localhost:5984/geodata3/_mix/normal/_view/all/_external/geo/normal?limit=11&geom=loc&bbox=0,50,11,51
 % _external/_view intersection
 handle_mix_req(#httpd{method='GET',
-        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
-                    _View, ViewName]}=Req, Db) ->
+%        path_parts=[_Db, _Mix, DesignName, _External, ExternalName,
+%                    _View, ViewName]}=Req, Db) ->
+        path_parts=[_Db, _Mix, DesignName, <<"_view">>, ViewName,
+                    _External, ExternalName | _ExternalPath]}=Req, Db) ->
+
     QueryList = couch_httpd:qs(Req),
     ExternalProps = #mix_settings_external{name=ExternalName,
                                            query_=QueryList},
